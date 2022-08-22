@@ -175,21 +175,12 @@ void plot_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t colo
 void plot_line_2color(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color_x0y0, uint16_t color_x1y1);
 
 
-typedef struct{
-	uint16_t x0_circle;
-	uint16_t y0_circle;
-	
-	int16_t r_circle;
-	
-	uint16_t color_circle;
-} Tcircle;
-
 //Circle drawing by midpoint circle drawing algorithm
 //@param uint16_t x0			coordinate x0 of circle center
 //@param uint16_t y0			coordinate y0 of circle center
 //@param uint16_t r				radius of the circle
 //@param uint16_t color		color of the circle
-void plot_circle(Tcircle *crlc, uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
+void plot_circle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
 //--------------------------------------------------------------------------------------------------------
 
 //=============================================================================================================================

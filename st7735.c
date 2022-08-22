@@ -610,49 +610,7 @@ void plot_line_2color(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16
 
 //plot circle
 //----------------------------------------------------------------------------------------------------------------
-void plot_circle(Tcircle *pcrcl, uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
-{
-	pcrcl -> x0_circle = x0;
-	pcrcl -> y0_circle = y0;
-	
-	pcrcl -> r_circle = r;
-	
-	//starting coordinates
-	int16_t x = 0;
-	int16_t y = r;
-	
-	//The value of p is calculated at the mid-point of the two contending pixels (x - 0.5, y+1)
-	//p = (r – 0.5)^2 + (0+1)^2 – r^2 = =1.25 – r = 1 - r (because integer value)
-	int16_t p = 1 - r;
-	
-	do
-	{
-		ST7735_DrawPixel(x0 + x, y0 + y, color);
-		ST7735_DrawPixel(x0 + y, y0 + x, color);
-		ST7735_DrawPixel(x0 - y, y0 + x, color);
-		ST7735_DrawPixel(x0 - x, y0 + y, color);
-		ST7735_DrawPixel(x0 - x, y0 - y, color);
-		ST7735_DrawPixel(x0 - y, y0 - x, color);
-		ST7735_DrawPixel(x0 + y, y0 - x, color);
-		ST7735_DrawPixel(x0 + x, y0 - y, color);
-		
-		//inside the circle
-		if(p < 0)
-			p += (2*x) + 1;
-		
-		//p > 0 -> outside circle
-		else
-		{
-			y = y - 1;
-			p += (2*x) - (2*y) + 1;
-		}
-		
-		x = x + 1;
-	}
-	while(y >= x);	
-}
 
-/*
 void plot_circle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
 {
 	//starting coordinates
@@ -689,7 +647,6 @@ void plot_circle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
 	}
 	while(y >= x);	
 }
-*/
 //----------------------------------------------------------------------------------------------------------------
 //=============================================================================================================================
 
