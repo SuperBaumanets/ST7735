@@ -122,64 +122,59 @@ uint16_t convcolor24to16(uint16_t red_8, uint16_t green_8, uint16_t blue_8);
 //Geometric primitives
 //--------------------------------------------------------------------------------------------------------
 
-//@param uint16_t c_pos 		column position 
-//@param uint16_t r_pos			row position
-
-//          c_pos
-//          ^
-//          |
-//x x x ... X x x x -> r_pos
-//x x x ... x x x x
-//. . .     . . x x
-//. . .     . . x x
-//x x x ... x x x x
-//@param uint16_t color 
+//@param uint16_t c_pos 					coordinate x0 of pixel
+//@param uint16_t r_pos						coordinate y0 of pixel
+//@param uint16_t color 					the pixel will be (uint16_t color) color
 void ST7735_DrawPixel(uint16_t c_pos, uint16_t r_pos, uint16_t color);
 
 
-//@param uint16_t c_start
-//@param uint16_t r_start
-//@param uint16_t c_stop
-//@param uint16_t c_stop
-
-//          c_start			c_stop
-//          ^						^
-//          |						|
-//x x x ... R R R R R R R x  -> r_start
-//x x x ... R R R R R R R	x 
-//. . .     . . R R R R R x
-//. . .     R . R R R R R x -> r_stop
-//x x x ... x x x x x x x x
-//@param uint16_t color
+//@param uint16_t c_start				coordinate x0 of start point
+//@param uint16_t r_start				coordinate y0 of start point
+//@param uint16_t c_stop				coordinate x1 of finish point
+//@param uint16_t c_stop				coordinate y1 of finish point
+//@param uint16_t color					the rectangle will be (uint16_t color) color
 void ST7735_DrawRect(uint16_t c_start, uint16_t r_start, uint16_t c_stop, uint16_t r_stop, uint16_t color);
 
 
+//@param uint16_t x0						coordinate x0 of start point
+//@param uint16_t x1						coordinate x1 of finish point
+//@param uint16_t y							coordinate y of start and finish points
+//@param uint16_t color					the line will be (uint16_t color) color
+void plot_fast_vrtline(uint16_t x0, uint16_t x1, uint16_t y, uint16_t color);
+
+
+//@param uint16_t y0						coordinate y0 of start point
+//@param uint16_t y1						coordinate y1 of finish point
+//@param uint16_t x							coordinate x of start and finish points
+//@param uint16_t color					the line will be (uint16_t color) color
+void plot_fast_hrznline(uint16_t y0, uint16_t y1, uint16_t x, uint16_t color);
+
+
 //Line drawing by Bresenham's line algorithm 
-//@param uint16_t x0
-//@param uint16_t y0
-//@param uint16_t x1
-//@param uint16_t y1
-//@param uint16_t color 	 the line will be (uint16_t color) color
+//@param uint16_t x0						coordinate x0 of start point
+//@param uint16_t y0						coordinate y0 of start point
+//@param uint16_t x1						coordinate x1 of finish point
+//@param uint16_t y1						coordinate y1 of finish point
+//@param uint16_t color 				the line will be (uint16_t color) color
 void plot_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
 
 
 //Line drawing by Bresenham's line algorithm 
-//@param uint16_t x0
-//@param uint16_t y0
-//@param uint16_t x1
-//@param uint16_t y1
-
 //the line will be with smooth transition from color_x0y0 to color_x1y1. For the gradien is used linear interpolation
-//@param uint16_t color_x0y0 
-//@param uint16_t color_x1y1
+//@param uint16_t x0						coordinate x0 of start point
+//@param uint16_t y0						coordinate y0 of start point
+//@param uint16_t x1						coordinate x1 of finish point
+//@param uint16_t y1						coordinate y1 of finish point
+//@param uint16_t color_x0y0 		color of start point
+//@param uint16_t color_x1y1		color of finish point
 void plot_line_2color(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color_x0y0, uint16_t color_x1y1);
 
 
 //Circle drawing by midpoint circle drawing algorithm
-//@param uint16_t x0			coordinate x0 of circle center
-//@param uint16_t y0			coordinate y0 of circle center
-//@param uint16_t r				radius of the circle
-//@param uint16_t color		color of the circle
+//@param uint16_t x0						coordinate x0 of circle center
+//@param uint16_t y0						coordinate y0 of circle center
+//@param uint16_t r							radius of the circle
+//@param uint16_t color					color of the circle
 void plot_circle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
 //--------------------------------------------------------------------------------------------------------
 

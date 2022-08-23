@@ -138,8 +138,8 @@ void ST7735_Init()
   ST7735_SendCommand(ST7735_COLMOD);
 	
 	//ST7735_SendData(0x03); 														//12 bits/pixel
-	ST7735_SendData(0x05); 														  /*16 bits/pixel R5b(31)/G6b(63)/B5b(31) R0R1R2R3R4|G0G1G2G3G4G5|B0B1B2B3B4
-																																																 R0R1R2R3|R4G0G1G2|G3G4G5B0|B1B2B3B4 */
+	ST7735_SendData(0x05); 														  //16 bits/pixel R5b(31)/G6b(63)/B5b(31) R0R1R2R3|R4G0G1G2|G3G4G5B0|B1B2B3B4 
+																																																
 	//ST7735_SendData(0x06); 														//18 bits/pixel
 	//ST7735_SendData(0x07); 														//No used
 	
@@ -323,6 +323,8 @@ uint16_t interpolationcolor(uint16_t p_start, uint16_t p_finish, uint16_t step, 
 	RGBx1y1[1] = (color_x1y1 & Greenmask) >> 5;
 	RGBx1y1[2] = color_x1y1 & Bluemask;	
 	
+	uint16_t lenght = p_finish - p_start; //line size
+	
 	//in general the algorithm has the form:
 	//   lenght   |R_x0y0|			0     |R_x1y1|	 |R_trnsf|
 	//  ------- * |G_x0y0| + ------ * |G_x1y1| = |G_trnsf|
@@ -343,8 +345,6 @@ uint16_t interpolationcolor(uint16_t p_start, uint16_t p_finish, uint16_t step, 
 	//     0      |R_x0y0|	 lenght   |R_x1y1|	 |R_trnsf|
 	//  ------- * |G_x0y0| + ------ * |G_x1y1| = |G_trnsf|
 	//   lenght   |B_x0y0|	 lenght   |B_x1y1|	 |B_trnsf|
-	
-	uint16_t lenght = p_finish - p_start; //line size
 	
 	//***************************************************************************************************************************************
 	for(uint8_t color = 0; color < 3; color++)
@@ -369,26 +369,22 @@ uint16_t interpolationcolor(uint16_t p_start, uint16_t p_finish, uint16_t step, 
 //----------------------------------------------------------------------------------------------------------------
 void ST7735_DrawPixel(uint16_t c_pos, uint16_t r_pos, uint16_t color)
 {
+	uint8_t colorBytes[2];
+	colorBytes[0] = (color & 0xFF00) >> 8;
+  colorBytes[1] = color & 0x00FF;
+	
 	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
 	
+	//send position
 	ST7735_SetColAddr(c_pos, c_pos);
   ST7735_SetRowAddr(r_pos, r_pos);
 	
 	ST7735_SendCommand(ST7735_RAMWR);
   
-  uint32_t size = c_pos * r_pos;
-	
-  uint8_t colorBytes[2];
-  colorBytes[0] = (color & 0xFF00) >> 8;
-  colorBytes[1] = color & 0x00FF;
-  
   HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
   
-  for (uint32_t i = 0; i < size; i++)
-  {
-    ST7735_SendByte(colorBytes[0]);
-    ST7735_SendByte(colorBytes[1]);
-  }
+  ST7735_SendByte(colorBytes[0]);
+  ST7735_SendByte(colorBytes[1]);
 	
   ST7735_WaitLastData();
   HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
@@ -400,19 +396,77 @@ void ST7735_DrawPixel(uint16_t c_pos, uint16_t r_pos, uint16_t color)
 //----------------------------------------------------------------------------------------------------------------
 void ST7735_DrawRect(uint16_t cStart, uint16_t rStart, uint16_t cStop, uint16_t rStop, uint16_t color)
 {
+	uint8_t colorBytes[2];
+  colorBytes[0] = (color & 0xFF00) >> 8;
+  colorBytes[1] = color & 0x00FF;
+	
   HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
   ST7735_SetColAddr(cStart, cStop - 1);
   ST7735_SetRowAddr(rStart, rStop - 1);
   
   ST7735_SendCommand(ST7735_RAMWR);
   
-  uint32_t size = (cStop - cStart) * (rStop - rStart);
-  uint8_t colorBytes[2];
+  HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
+	
+	uint32_t size = (cStop - cStart) * (rStop - rStart);
+  for (uint32_t i = 0; i < size; i++)
+  {
+    ST7735_SendByte(colorBytes[0]);
+    ST7735_SendByte(colorBytes[1]);
+  }
+  
+  ST7735_WaitLastData();
+  HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
+}
+//----------------------------------------------------------------------------------------------------------------
+
+
+//plot vertical line 1 color
+//----------------------------------------------------------------------------------------------------------------
+void plot_fast_vrtline(uint16_t x0, uint16_t x1, uint16_t y, uint16_t color)
+{
+	uint8_t colorBytes[2];
   colorBytes[0] = (color & 0xFF00) >> 8;
   colorBytes[1] = color & 0x00FF;
+	
+  HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
+  ST7735_SetColAddr(x0, x1);
+  ST7735_SetRowAddr(y, y);
+  
+  ST7735_SendCommand(ST7735_RAMWR);
   
   HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
+	
+	uint32_t size = x1 - x0;
+  for (uint32_t i = 0; i < size; i++)
+  {
+    ST7735_SendByte(colorBytes[0]);
+    ST7735_SendByte(colorBytes[1]);
+  }
   
+  ST7735_WaitLastData();
+  HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
+}
+//----------------------------------------------------------------------------------------------------------------
+
+
+//plot horizontal line 1 color
+//----------------------------------------------------------------------------------------------------------------
+void plot_fast_hrznline(uint16_t y0, uint16_t y1, uint16_t x, uint16_t color)
+{
+	uint8_t colorBytes[2];
+  colorBytes[0] = (color & 0xFF00) >> 8;
+  colorBytes[1] = color & 0x00FF;
+	
+  HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
+  ST7735_SetColAddr(y0, y1);
+  ST7735_SetRowAddr(x, x);
+  
+  ST7735_SendCommand(ST7735_RAMWR);
+  
+  HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
+	
+	uint32_t size = y1 - y0;
   for (uint32_t i = 0; i < size; i++)
   {
     ST7735_SendByte(colorBytes[0]);
@@ -610,7 +664,6 @@ void plot_line_2color(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16
 
 //plot circle
 //----------------------------------------------------------------------------------------------------------------
-
 void plot_circle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
 {
 	//starting coordinates
