@@ -128,26 +128,18 @@ uint16_t convcolor24to16(uint16_t red_8, uint16_t green_8, uint16_t blue_8);
 void ST7735_DrawPixel(uint16_t c_pos, uint16_t r_pos, uint16_t color);
 
 
-//@param uint16_t c_start				coordinate x0 of start point
-//@param uint16_t r_start				coordinate y0 of start point
-//@param uint16_t c_stop				coordinate x1 of finish point
-//@param uint16_t c_stop				coordinate y1 of finish point
-//@param uint16_t color					the rectangle will be (uint16_t color) color
-void ST7735_DrawRect(uint16_t c_start, uint16_t r_start, uint16_t c_stop, uint16_t r_stop, uint16_t color);
-
-
 //@param uint16_t x0						coordinate x0 of start point
 //@param uint16_t x1						coordinate x1 of finish point
-//@param uint16_t y							coordinate y of start and finish points
+//@param uint16_t height				height of rectangle		
 //@param uint16_t color					the line will be (uint16_t color) color
-void plot_fast_vrtline(uint16_t x0, uint16_t x1, uint16_t y, uint16_t color);
+void plot_fast_vrtline(uint16_t x0, uint16_t y0, uint16_t height, uint16_t color);
 
 
 //@param uint16_t y0						coordinate y0 of start point
 //@param uint16_t y1						coordinate y1 of finish point
-//@param uint16_t x							coordinate x of start and finish points
+//@param uint16_t x							width of rectangle
 //@param uint16_t color					the line will be (uint16_t color) color
-void plot_fast_hrznline(uint16_t y0, uint16_t y1, uint16_t x, uint16_t color);
+void plot_fast_hrznline(uint16_t x0, uint16_t y0, uint16_t width, uint16_t color);
 
 
 //Line drawing by Bresenham's line algorithm 
@@ -168,6 +160,22 @@ void plot_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t colo
 //@param uint16_t color_x0y0 		color of start point
 //@param uint16_t color_x1y1		color of finish point
 void plot_line_2color(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color_x0y0, uint16_t color_x1y1);
+
+
+//@param uint16_t c_start				coordinate x0 of start point
+//@param uint16_t r_start				coordinate y0 of start point
+//@param uint16_t width					width of rectangle
+//@param uint16_t height				height of rectangle
+//@param uint16_t color					the rectangle will be (uint16_t color) color
+void plot_rectangle(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t color);
+
+
+//@param uint16_t c_start				coordinate x0 of start point
+//@param uint16_t r_start				coordinate y0 of start point
+//@param uint16_t width					width of rectangle
+//@param uint16_t height				height of rectangle
+//@param uint16_t color					the rectangle will be (uint16_t color) color
+void plot_fillrectangle(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, uint16_t color);
 
 
 //Circle drawing by midpoint circle drawing algorithm
