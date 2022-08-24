@@ -169,12 +169,6 @@ void plot_line_2color(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16
 //@param uint16_t color					the rectangle will be (uint16_t color) color
 void plot_rectangle(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t color);
 
-
-//@param uint16_t c_start				coordinate x0 of start point
-//@param uint16_t r_start				coordinate y0 of start point
-//@param uint16_t width					width of rectangle
-//@param uint16_t height				height of rectangle
-//@param uint16_t color					the rectangle will be (uint16_t color) color
 void plot_fillrectangle(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, uint16_t color);
 
 
@@ -184,6 +178,17 @@ void plot_fillrectangle(uint16_t x0, uint16_t y0, uint16_t width, uint16_t heigh
 //@param uint16_t r							radius of the circle
 //@param uint16_t color					color of the circle
 void plot_circle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
+
+
+//@param uint16_t x0						coordinate x0 of first point
+//@param uint16_t y0						coordinate y0 of first point
+//@param uint16_t x1						coordinate x1 of second point
+//@param uint16_t y1						coordinate y1 of second point
+//@param uint16_t x2						coordinate x0 of third point
+//@param uint16_t y2						coordinate y0 of third point
+void plot_triangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
+
+void plot_filltriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color);
 //--------------------------------------------------------------------------------------------------------
 
 //=============================================================================================================================

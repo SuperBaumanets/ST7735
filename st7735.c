@@ -674,7 +674,7 @@ void plot_fillrectangle(uint16_t x0, uint16_t y0, uint16_t width, uint16_t heigh
 //----------------------------------------------------------------------------------------------------------------
 
 
-//plot circle
+//plot not fill circle
 //----------------------------------------------------------------------------------------------------------------
 void plot_circle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
 {
@@ -711,6 +711,130 @@ void plot_circle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
 		x = x + 1;
 	}
 	while(y >= x);	
+}
+//----------------------------------------------------------------------------------------------------------------
+
+
+//plot not filltriangle
+//----------------------------------------------------------------------------------------------------------------
+void plot_triangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color) 
+{
+  plot_line(x0, y0, x1, y1, color);
+  plot_line(x1, y1, x2, y2, color);
+	plot_line(x2, y2, x0, y0, color);
+}
+//----------------------------------------------------------------------------------------------------------------
+
+
+//plot fill triangle
+//----------------------------------------------------------------------------------------------------------------
+void swap(int16_t *a, int16_t *b)
+{
+	int buf;
+  buf = *a;
+  *a = *b;
+  *b = buf;	
+}
+
+void plot_filltriangle( int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) 
+{
+
+  int16_t abscissa_x0;
+	int16_t abscissa_x1;
+	int16_t y, saved_y;
+
+  // Sort coordinates p(x0, y0), p(x1, y1), p(x2, y2) 
+	//(y2 >= y1 >= y0)
+  if (y0 > y1) 
+	{
+    swap(&y0, &y1); 
+		swap(&x0, &x1);
+  }
+  if (y1 > y2) 
+	{
+    swap(&y2, &y1); 
+		swap(&x2, &x1);
+  }
+  if (y0 > y1) 
+	{
+    swap(&y0, &y1); 
+		swap(&x0, &x1);
+  }
+
+	//all on same line
+	//****************************************
+  if(y0 == y2 )
+	{
+    abscissa_x0 = abscissa_x1 = x0;
+    if(x1 < abscissa_x0)      
+			abscissa_x0 = x1;
+    else if(x1 > abscissa_x1) 
+			abscissa_x1 = x1;
+    if(x2 < abscissa_x0)      
+			abscissa_x0 = x2;
+    else if(x2 > abscissa_x1) 
+			abscissa_x1 = x2;
+    plot_fast_hrznline(abscissa_x0, y0, abscissa_x1 - abscissa_x0 + 1, color);
+    return;
+  }
+	//****************************************
+	
+	//x-axis increments for three side triangle
+  int32_t dx01 = x1 - x0;
+  int32_t dx02 = x2 - x0;
+	int32_t dx12 = x2 - x1;
+	
+	//y-axis increments for three side triangle
+	int32_t dy01 = y1 - y0;
+  int32_t dy02 = y2 - y0;
+  int32_t dy12 = y2 - y1;
+	
+  int32_t abscissa_trnglx0 = 0;
+  int32_t abscissa_trnglx1 = 0;
+
+  if(y1 == y2) 
+		saved_y = y1;   // Include y1 scanline
+  else         
+		saved_y = y1 - 1; // Skip it
+
+	//up triangle
+  for(y = y0; y <= saved_y; y++) 
+	{
+		//equation of line 
+    //abscissa_x0 = x0 + (x1 - x0) * (y - y0) / (y1 - y0);
+    //abscissa_x1 = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
+    abscissa_x0 = x0 + abscissa_trnglx0 / dy01;
+    abscissa_x1 = x0 + abscissa_trnglx1 / dy02;
+		
+    abscissa_trnglx0 += dx01;
+    abscissa_trnglx1 += dx02;
+		
+    if(abscissa_x0 > abscissa_x1) 
+			swap(&abscissa_x0, &abscissa_x1);
+		
+    plot_fast_hrznline(abscissa_x0, y, abscissa_x1 - abscissa_x0 + 1, color);
+  }
+
+  abscissa_trnglx0 = dx12 * (y - y1);
+  abscissa_trnglx1 = dx02 * (y - y0);
+	
+	//dawn triangle
+  for(; y <= y2; y++) 
+	{
+		//equation of line 
+    //abscissa_x0 = x1 + (x2 - x1) * (y - y1) / (y2 - y1);
+    //abscissa_x1 = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
+    abscissa_x0 = x1 + abscissa_trnglx0 / dy12;
+    abscissa_x1 = x0 + abscissa_trnglx1 / dy02;
+		
+    abscissa_trnglx0 += dx12;
+    abscissa_trnglx1 += dx02;
+		
+    if(abscissa_x0 > abscissa_x1)
+			swap(&abscissa_x0, &abscissa_x1);
+		
+    plot_fast_hrznline(abscissa_x0, y, abscissa_x1 - abscissa_x0 + 1, color);
+  }
 }
 //----------------------------------------------------------------------------------------------------------------
 //=============================================================================================================================
