@@ -29,10 +29,8 @@
 #define ST7735_DC_PIN                                                   (GPIO_PIN_3)
 
 
-#define ST7735_X_SIZE 																									128
-#define ST7735_Y_SIZE 																									160
-#define ST7735_X_CENTRE 																								ST7735_X_SIZE / 2
-#define ST7735_Y_CENTRE																									ST7735_Y_SIZE / 2
+#define ST7735_WIDTH 																										128
+#define ST7735_HEIGHT 																									160
 
 
 //System function command
@@ -86,6 +84,26 @@
 #define ST7735_GMCTRN1                                                  0xE1
 
 #define ST7735_SPI_TIMEOUT                                              100
+//=============================================================================================================================
+
+
+//Variables
+//=============================================================================================================================
+//variables of cursor
+typedef struct __cursor_typedef
+{
+	uint16_t x_cursor;
+	uint16_t y_cursor;
+}cursor_typedef;
+
+//variables of text
+typedef struct __text_typedef
+{
+	uint16_t text_size;
+	uint16_t text_position_x;
+	uint16_t text_position_y;
+}text_typedef;
+
 //=============================================================================================================================
 
 
@@ -181,8 +199,6 @@ void plot_circle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
 
 void plot_fillcircle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
 
-void plot_circlearc(uint16_t alpha0, uint16_t alpha1, uint16_t x0, uint16_t y0, uint16_t r, uint16_t color);
-
 
 //@param uint16_t x0						coordinate x0 of first point
 //@param uint16_t y0						coordinate y0 of first point
@@ -195,5 +211,6 @@ void plot_triangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t 
 void plot_filltriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color);
 //--------------------------------------------------------------------------------------------------------
 
+void set_cursor(int16_t x, int16_t y, uint8_t auto_center, uint8_t print_cursor);
 //=============================================================================================================================
 #endif // #ifndef ST7735_H_
