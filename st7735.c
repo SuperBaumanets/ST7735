@@ -708,8 +708,107 @@ void plot_circle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
 			p += (2*x) - (2*y) + 1;
 		}
 		
-		x = x + 1;
+		x++;
 	}
+	while(y >= x);	
+}
+//----------------------------------------------------------------------------------------------------------------
+
+
+//plot fill circle
+//----------------------------------------------------------------------------------------------------------------
+void plot_fillcircle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
+{
+	//starting coordinates
+	int16_t x = 0;
+	int16_t y = r;
+	
+	//The value of p is calculated at the mid-point of the two contending pixels (x - 0.5, y+1)
+	//p = (r – 0.5)^2 + (0+1)^2 – r^2 = =1.25 – r = 1 - r (because integer value)
+	int16_t p = 1 - r;
+	
+	do
+	{
+		plot_fast_hrznline(x0 - x, y0 + y, 2*x, color);
+		plot_fast_hrznline(x0 - y, y0 + x, 2*y, color);
+		plot_fast_hrznline(x0 - y, y0 - x, 2*y, color);
+		plot_fast_hrznline(x0 - x, y0 - y, 2*x, color);
+		
+		//inside the circle
+		if(p < 0)
+			p += (2*x) + 1;
+		
+		//p > 0 -> outside circle
+		else
+		{
+			y = y - 1;
+			p += (2*x) - (2*y) + 1;
+		}
+		
+		x++;
+	}
+	while(y >= x);	
+}
+//----------------------------------------------------------------------------------------------------------------
+
+
+//plot circle arc
+//----------------------------------------------------------------------------------------------------------------
+void plot_circlearc(uint16_t alpha0, uint16_t alpha1, uint16_t x0, uint16_t y0, uint16_t r, uint16_t color)
+{
+	int16_t x_alpha0 = r * cos(3.14 * alpha0 / 180);
+	int16_t y_alpha0 = r * sin(3.14 * alpha0 / 180);
+	
+	int16_t x_alpha1 = r * cos(3.14 * alpha1 / 180);
+	int16_t y_alpha1 = r * sin(3.14 * alpha1 / 180);
+	
+	//starting coordinates
+	int16_t x = 0;
+	int16_t y = r;
+	
+	//The value of p is calculated at the mid-point of the two contending pixels (x - 0.5, y+1)
+	//p = (r – 0.5)^2 + (0+1)^2 – r^2 = =1.25 – r = 1 - r (because integer value)
+	int16_t p = 1 - r;
+	
+	do
+	{
+		if(y >= y_alpha0)
+		{
+			ST7735_DrawPixel(x0 + x, y0 + y, color);
+			ST7735_DrawPixel(x0 - x, y0 + y, color);
+		}
+		
+		if(y >= y_alpha0)
+		{
+			ST7735_DrawPixel(x0 - x, y0 - y, color);
+			ST7735_DrawPixel(x0 + x, y0 - y, color);
+		}
+		
+		if(x >= y_alpha0)
+		{
+			ST7735_DrawPixel(x0 + y, y0 + x, color);
+			ST7735_DrawPixel(x0 - y, y0 + x, color);
+		}
+		
+		if(x >= y_alpha0)
+		{
+			ST7735_DrawPixel(x0 - y, y0 - x, color);
+			ST7735_DrawPixel(x0 + y, y0 - x, color);
+		}
+		
+		//inside the circle
+		if(p < 0)
+			p += (2*x) + 1;
+		
+		//p > 0 -> outside circle
+		else
+		{
+			y = y - 1;
+			p += (2*x) - (2*y) + 1;
+		}
+		
+		x++;
+	}	
 	while(y >= x);	
 }
 //----------------------------------------------------------------------------------------------------------------
@@ -736,7 +835,7 @@ void swap(int16_t *a, int16_t *b)
   *b = buf;	
 }
 
-void plot_filltriangle( int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) 
+void plot_filltriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) 
 {
 
   int16_t abscissa_x0;

@@ -179,6 +179,10 @@ void plot_fillrectangle(uint16_t x0, uint16_t y0, uint16_t width, uint16_t heigh
 //@param uint16_t color					color of the circle
 void plot_circle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
 
+void plot_fillcircle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
+
+void plot_circlearc(uint16_t alpha0, uint16_t alpha1, uint16_t x0, uint16_t y0, uint16_t r, uint16_t color);
+
 
 //@param uint16_t x0						coordinate x0 of first point
 //@param uint16_t y0						coordinate y0 of first point
