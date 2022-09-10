@@ -11,6 +11,8 @@ extern SPI_HandleTypeDef hspi1;
 
 cursor_typedef crsr1;
 text_typedef txt1;
+
+screen_t scr1 = {0, ST7735_WIDTH, 0, ST7735_HEIGHT};
 //=============================================================================================================================
 
 
@@ -135,19 +137,13 @@ void ST7735_Init()
   ST7735_SendData(0x0E);
 
   ST7735_SendCommand(ST7735_INVOFF);
-
-  ST7735_SendCommand(ST7735_MADCTL);
-  ST7735_SendData(0xC0);
+	
+  ST7735_SendCommand(ST7735_MADCTL);									//Display data direction
+  ST7735_SendData(0x00);															//Normal: X-Y address(0,0) locate in up left corner of screen (screen's loop up)
 
   ST7735_SendCommand(ST7735_COLMOD);
-	
-	//ST7735_SendData(0x03); 														//12 bits/pixel
 	ST7735_SendData(0x05); 														  //16 bits/pixel R5b(31)/G6b(63)/B5b(31) R0R1R2R3|R4G0G1G2|G3G4G5B0|B1B2B3B4 
-																																																
-	//ST7735_SendData(0x06); 														//18 bits/pixel
-	//ST7735_SendData(0x07); 														//No used
 	
-
   ST7735_SendCommand(ST7735_GMCTRP1);
   ST7735_SendData(0x02);
   ST7735_SendData(0x1c);
@@ -196,6 +192,57 @@ void ST7735_Init()
 
 
 //----------------------------------------------------------------------------
+void set_ScreenRotate(uint16_t angle)
+{
+	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
+	
+	switch(angle)
+	{
+		case 0:
+			ST7735_SendCommand(ST7735_MADCTL);
+			ST7735_SendData(0x00);
+			
+			scr1.dsplmt_xend = ST7735_WIDTH;
+			scr1.dsplmt_yend = ST7735_HEIGHT;
+					break;
+		
+		case 90:
+			ST7735_SendCommand(ST7735_MADCTL);
+			ST7735_SendData(0xA0); 
+			
+			scr1.dsplmt_xend = ST7735_HEIGHT;
+			scr1.dsplmt_yend = ST7735_WIDTH;
+					break;
+		
+		case 180:
+			ST7735_SendCommand(ST7735_MADCTL);
+			ST7735_SendData(0xC0); 
+
+			scr1.dsplmt_xend = ST7735_WIDTH;
+			scr1.dsplmt_yend = ST7735_HEIGHT;
+					break;
+		
+		case 270:
+			ST7735_SendCommand(ST7735_MADCTL);
+			ST7735_SendData(0x60); 
+		
+			scr1.dsplmt_xend = ST7735_HEIGHT;
+			scr1.dsplmt_yend = ST7735_WIDTH;
+					break;			
+	}
+	
+	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);		
+}
+//----------------------------------------------------------------------------
+
+
+void fillScreen(uint16_t color)
+{
+	plot_FillRectangle(0, 0, scr1.dsplmt_xend, scr1.dsplmt_yend, color);
+}
+
+
+//----------------------------------------------------------------------------
 void ST7735_SetColAddr(uint16_t c_start, uint16_t c_stop)
 {
   uint8_t data[4];
@@ -232,7 +279,7 @@ void ST7735_SetRowAddr(uint16_t r_start, uint16_t r_stop)
 //================================================================================================================================================
 
 //----------------------------------------------------------------------------------------------------------------
-uint16_t setcolor16(uint16_t red_5, uint16_t green_6, uint16_t blue_5)
+uint16_t set_Color16(uint16_t red_5, uint16_t green_6, uint16_t blue_5)
 {
 	uint16_t RGB[3] = {0x0000, 0x0000, 0x0000}; 
 	uint16_t RGBtrnsf[3];
@@ -254,7 +301,7 @@ uint16_t setcolor16(uint16_t red_5, uint16_t green_6, uint16_t blue_5)
 
 
 //----------------------------------------------------------------------------------------------------------------
-uint16_t convcolor24to16(uint16_t red_8, uint16_t green_8, uint16_t blue_8)
+uint16_t conv_Color24to16(uint16_t red_8, uint16_t green_8, uint16_t blue_8)
 {
 	uint16_t RGB[3] = {0x0000, 0x0000, 0x0000};
 	uint16_t RGBtrnsf[3];
@@ -305,10 +352,11 @@ uint16_t convcolor24to16(uint16_t red_8, uint16_t green_8, uint16_t blue_8)
 
 //----------------------------------------------------------------------------------------------------------------
 //function interpolationcolor gets values in line coordinate system.	
-//@param uint16_t p_start 		start  line's coordinate
-//@param uint16_t p_finish		finish line's coordinate
-//@paramuint16_t step					coordinate from start to finish line's coordinate
-uint16_t interpolationcolor(uint16_t p_start, uint16_t p_finish, uint16_t step,  uint16_t color_x0y0, uint16_t color_x1y1)
+//@param  uint16_t p_start 		start  line's coordinate
+//@param  uint16_t p_finish		finish line's coordinate
+//@param  uint16_t step				coordinate from start to finish line's coordinate
+//@return trnsf_color;
+uint16_t InterpolationColor(uint16_t p_start, uint16_t p_finish, uint16_t step,  uint16_t color_x0y0, uint16_t color_x1y1)
 {
 	uint16_t trnsf_color;
 	
@@ -364,6 +412,7 @@ uint16_t interpolationcolor(uint16_t p_start, uint16_t p_finish, uint16_t step, 
 	return trnsf_color;
 }
 //----------------------------------------------------------------------------------------------------------------
+
 //================================================================================================================================================
 
 
@@ -372,85 +421,122 @@ uint16_t interpolationcolor(uint16_t p_start, uint16_t p_finish, uint16_t step, 
 
 //Draw pixel
 //----------------------------------------------------------------------------------------------------------------
-void ST7735_DrawPixel(uint16_t c_pos, uint16_t r_pos, uint16_t color)
+void ST7735_DrawPixel(uint16_t x, uint16_t y, uint16_t color)
 {
-	uint8_t colorBytes[2];
-	colorBytes[0] = (color & 0xFF00) >> 8;
-  colorBytes[1] = color & 0x00FF;
+	if( (x < scr1.dsplmt_xstart) || (x >= scr1.dsplmt_xend) || (y < scr1.dsplmt_ystart) || (y >= scr1.dsplmt_yend) )
+		return;
 	
-	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
+	else
+	{
+		uint8_t colorBytes[2];
+		colorBytes[0] = (color & 0xFF00) >> 8;
+		colorBytes[1] = color & 0x00FF;
 	
-	//send position
-	ST7735_SetColAddr(c_pos, c_pos);
-  ST7735_SetRowAddr(r_pos, r_pos);
+		HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
 	
-	ST7735_SendCommand(ST7735_RAMWR);
+		//send position
+		ST7735_SetColAddr(x, x);
+		ST7735_SetRowAddr(y, y);
+	
+		ST7735_SendCommand(ST7735_RAMWR);
   
-  HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
   
-  ST7735_SendByte(colorBytes[0]);
-  ST7735_SendByte(colorBytes[1]);
+		ST7735_SendByte(colorBytes[0]);
+		ST7735_SendByte(colorBytes[1]);
 	
-  ST7735_WaitLastData();
-  HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
+		ST7735_WaitLastData();
+		HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
+	}
 }
 //----------------------------------------------------------------------------------------------------------------
 
 
 //plot vertical line 1 color
 //----------------------------------------------------------------------------------------------------------------
-void plot_fast_vrtline(uint16_t x0, uint16_t y0, uint16_t height, uint16_t color)
+void plot_FastVrtLine(int16_t x0, int16_t y0, uint16_t height, uint16_t color)
 {
+	if( (x0 < scr1.dsplmt_xstart) || (x0 >= scr1.dsplmt_xend) || (y0 >= scr1.dsplmt_yend) )
+		return;
+	
+	if(y0 < scr1.dsplmt_ystart)
+	{
+		height = height - (scr1.dsplmt_ystart - y0);
+		y0 = scr1.dsplmt_ystart;
+	}
+	
+	if(height < 1)
+		return;
+	
+	if(y0 + height - 1 >= scr1.dsplmt_yend) 
+		height = scr1.dsplmt_yend - y0; //height = height - (y0 + height - scr1.dsplmt_yend)
+	
 	uint8_t colorBytes[2];
-  colorBytes[0] = (color & 0xFF00) >> 8;
-  colorBytes[1] = color & 0x00FF;
-	
-  HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
-  ST7735_SetColAddr(x0, x0);
-  ST7735_SetRowAddr(y0, y0 + height - 1);
-  
-  ST7735_SendCommand(ST7735_RAMWR);
-  
-  HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
-	
+	colorBytes[0] = (color & 0xFF00) >> 8;
+	colorBytes[1] = color & 0x00FF;
+		
+	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
+	ST7735_SetColAddr(x0, x0);
+	ST7735_SetRowAddr(y0, y0 + height - 1);
+		
+	ST7735_SendCommand(ST7735_RAMWR);
+		
+	HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
+		
 	uint32_t size = height;
-  for (uint32_t i = 0; i < size; i++)
-  {
-    ST7735_SendByte(colorBytes[0]);
-    ST7735_SendByte(colorBytes[1]);
-  }
-  
-  ST7735_WaitLastData();
-  HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
+	for (uint32_t i = 0; i < size; i++)
+	{
+		ST7735_SendByte(colorBytes[0]);
+		ST7735_SendByte(colorBytes[1]);
+	}
+		
+	ST7735_WaitLastData();
+	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
 }
 //----------------------------------------------------------------------------------------------------------------
 
 
 //plot horizontal line 1 color
 //----------------------------------------------------------------------------------------------------------------
-void plot_fast_hrznline(uint16_t x0, uint16_t y0, uint16_t width, uint16_t color)
+void plot_FastHrznLine(int16_t x0, int16_t y0, uint16_t width, uint16_t color)
 {
+	if( (y0 < scr1.dsplmt_ystart) || (y0 >= scr1.dsplmt_yend) || (x0 >= scr1.dsplmt_yend) )
+		return;
+	
+	if(x0 < scr1.dsplmt_xstart)
+	{
+		width = width - (scr1.dsplmt_xstart - x0);
+		x0 = scr1.dsplmt_xstart;
+	}
+	
+	if(width < 1)
+		return;
+	
+	if(y0 + width - 1 >= scr1.dsplmt_xend) 
+		width = scr1.dsplmt_xend - y0; 
+	
+
 	uint8_t colorBytes[2];
-  colorBytes[0] = (color & 0xFF00) >> 8;
-  colorBytes[1] = color & 0x00FF;
-	
-  HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
-  ST7735_SetColAddr(x0, x0 + width - 1);
-  ST7735_SetRowAddr(y0, y0);
-  
-  ST7735_SendCommand(ST7735_RAMWR);
-  
-  HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
-	
+	colorBytes[0] = (color & 0xFF00) >> 8;
+	colorBytes[1] = color & 0x00FF;
+		
+	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
+	ST7735_SetColAddr(x0, x0 + width - 1);
+	ST7735_SetRowAddr(y0, y0);
+		
+	ST7735_SendCommand(ST7735_RAMWR);
+		
+	HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
+		
 	uint32_t size = width;
-  for (uint32_t i = 0; i < size; i++)
-  {
-    ST7735_SendByte(colorBytes[0]);
-    ST7735_SendByte(colorBytes[1]);
-  }
-  
-  ST7735_WaitLastData();
-  HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
+	for (uint32_t i = 0; i < size; i++)
+	{
+		ST7735_SendByte(colorBytes[0]);
+		ST7735_SendByte(colorBytes[1]);
+	}
+		
+	ST7735_WaitLastData();
+	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
 }
 //----------------------------------------------------------------------------------------------------------------
 
@@ -524,21 +610,30 @@ void plot_line_high(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t
 }
 
 //detect whether x1 > x0 or y1 > y0 and reverse the input coordinates before drawing
-void plot_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color)
+void plot_Line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color)
 {
-	if( abs((int)(y1 - y0)) < abs((int)(x1 - x0)) )
-	{
-		if(x0 > x1)
-			plot_line_low(x1, y1, x0, y0, color);
-		else
-			plot_line_low(x0, y0, x1, y1, color);
-	}
+	if( (x0 < scr1.dsplmt_xstart) || (x0 >= scr1.dsplmt_xend) || (y0 < scr1.dsplmt_ystart) || (y0 >= scr1.dsplmt_yend) )
+		return;
+	
+	if( (x1 < scr1.dsplmt_xstart) || (x1 >= scr1.dsplmt_xend) || (y1 < scr1.dsplmt_ystart) || (y1 >= scr1.dsplmt_yend) )
+		return;
+	
 	else
 	{
-		if(y0 > y1)
-			plot_line_high(x1, y1, x0, y0, color);
+		if( abs((int)(y1 - y0)) < abs((int)(x1 - x0)) )
+		{
+			if(x0 > x1)
+				plot_line_low(x1, y1, x0, y0, color);
+			else
+				plot_line_low(x0, y0, x1, y1, color);
+		}
 		else
-			plot_line_high(x0, y0, x1, y1, color);
+		{
+			if(y0 > y1)
+				plot_line_high(x1, y1, x0, y0, color);
+			else
+				plot_line_high(x0, y0, x1, y1, color);
+		}
 	}
 }
 //----------------------------------------------------------------------------------------------------------------
@@ -569,7 +664,7 @@ void plot_line_low_2(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_
 	
 	for(x = x0; x <= x1; x++)
 	{
-		color = interpolationcolor(x0, x1, x, color_x0y0, color_x1y1);
+		color = InterpolationColor(x0, x1, x, color_x0y0, color_x1y1);
 		ST7735_DrawPixel(x, y, color);
 		if(D > 0)
 		{
@@ -604,7 +699,7 @@ void plot_line_high_2(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16
 	
 	for(y = y0; y <= y1; y++)
 	{
-		color = interpolationcolor(y0, y1, y, color_x0y0, color_x1y1);
+		color = InterpolationColor(y0, y1, y, color_x0y0, color_x1y1);
 		ST7735_DrawPixel(x, y, color);
 		if(D > 0)
 		{
@@ -617,21 +712,30 @@ void plot_line_high_2(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16
 }
 
 
-void plot_line_2color(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color_x0y0, uint16_t color_x1y1)
+void plot_Line2Color(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color_x0y0, uint16_t color_x1y1)
 {
-	if( abs((int)(y1 - y0)) < abs((int)(x1 - x0)) )
-	{
-		if(x0 > x1)
-			plot_line_low_2(x1, y1, x0, y0, color_x0y0, color_x1y1);
-		else
-			plot_line_low_2(x0, y0, x1, y1, color_x0y0, color_x1y1);
-	}
+	if( (x0 < scr1.dsplmt_xstart) || (x0 >= scr1.dsplmt_xend) || (y0 < scr1.dsplmt_ystart) || (y0 >= scr1.dsplmt_yend) )
+		return;
+	
+	if( (x1 < scr1.dsplmt_xstart) || (x1 >= scr1.dsplmt_xend) || (y1 < scr1.dsplmt_ystart) || (y1 >= scr1.dsplmt_yend) )
+		return;
+	
 	else
 	{
-		if(y0 > y1)
-			plot_line_high_2(x1, y1, x0, y0, color_x0y0, color_x1y1);
+		if( abs((int)(y1 - y0)) < abs((int)(x1 - x0)) )
+		{
+			if(x0 > x1)
+				plot_line_low_2(x1, y1, x0, y0, color_x0y0, color_x1y1);
+			else
+				plot_line_low_2(x0, y0, x1, y1, color_x0y0, color_x1y1);
+		}
 		else
-			plot_line_high_2(x0, y0, x1, y1, color_x0y0, color_x1y1);
+		{
+			if(y0 > y1)
+				plot_line_high_2(x1, y1, x0, y0, color_x0y0, color_x1y1);
+			else
+				plot_line_high_2(x0, y0, x1, y1, color_x0y0, color_x1y1);
+		}
 	}
 }
 
@@ -640,49 +744,117 @@ void plot_line_2color(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16
 
 //Draw not fill rectangle
 //----------------------------------------------------------------------------------------------------------------
-void plot_rectangle(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t color)
+void plot_Rectangle(int16_t x0, int16_t y0, int16_t width, int16_t height, uint16_t color)
 {
-		plot_fast_hrznline(x, y, width, color);
-		plot_fast_hrznline(x, y + height - 1, width, color);
-		plot_fast_vrtline(x, y, height, color);
-		plot_fast_vrtline(x + width - 1, y, height, color);
+	if((x0 >= scr1.dsplmt_xend) || (y0 >= scr1.dsplmt_yend))
+		return;
+	
+	if( ( (x0 + width) <= scr1.dsplmt_xstart ) || ( (y0 + height) <= scr1.dsplmt_ystart))
+		return;
+	
+	if(x0 < scr1.dsplmt_xstart)
+	{	
+		width = width - (scr1.dsplmt_xstart - x0); 
+		x0 = scr1.dsplmt_xstart; 	
+	}
+	
+	if(y0 < scr1.dsplmt_ystart) 
+	{	
+		height = height - (scr1.dsplmt_ystart - y0); 
+		y0 = scr1.dsplmt_ystart; 	
+	}
+	
+	if((x0 + width - 1) >= scr1.dsplmt_xend)
+		width = scr1.dsplmt_xend - x0;
+	
+	if((y0 + height - 1) >= scr1.dsplmt_yend)
+		height = scr1.dsplmt_yend - y0;
+	
+	plot_FastHrznLine(x0, y0, width, color);
+	plot_FastHrznLine(x0, y0 + height - 1, width, color);
+	plot_FastVrtLine(x0, y0, height, color);
+	plot_FastVrtLine(x0 + width - 1, y0, height, color);
+
 }
 //----------------------------------------------------------------------------------------------------------------
 
 
 //Draw fill rectangle
 //----------------------------------------------------------------------------------------------------------------
-void plot_fillrectangle(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, uint16_t color)
+void plot_FillRectangle(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, uint16_t color)
 {
+	if((x0 >= scr1.dsplmt_xend) || (y0 >= scr1.dsplmt_yend))
+		return;
+	
+	if( ( (x0 + width) <= scr1.dsplmt_xstart ) || ( (y0 + height) <= scr1.dsplmt_ystart) )
+		return;
+	
+	if(x0 < scr1.dsplmt_xstart)
+	{	
+		width = width - (scr1.dsplmt_xstart - x0); 
+		x0 = scr1.dsplmt_xstart; 	
+	}
+	
+	if(y0 < scr1.dsplmt_ystart) 
+	{	
+		height = height - (scr1.dsplmt_ystart - y0); 
+		y0 = scr1.dsplmt_ystart; 	
+	}
+	
+	if((x0 + width - 1) >= scr1.dsplmt_xend)
+		width = scr1.dsplmt_xend - x0;
+	
+	if((y0 + height - 1) >= scr1.dsplmt_yend)
+		height = scr1.dsplmt_yend - y0;
+	
 	uint8_t colorBytes[2];
-  colorBytes[0] = (color & 0xFF00) >> 8;
-  colorBytes[1] = color & 0x00FF;
-	
-  HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
-  ST7735_SetColAddr(x0, x0 + width - 1);
-  ST7735_SetRowAddr(y0, y0 + height- 1);
-  
-  ST7735_SendCommand(ST7735_RAMWR);
-  
-  HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
-	
+	colorBytes[0] = (color & 0xFF00) >> 8;
+	colorBytes[1] = color & 0x00FF;
+		
+	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
+	ST7735_SetColAddr(x0, x0 + width - 1);
+	ST7735_SetRowAddr(y0, y0 + height- 1);
+		
+	ST7735_SendCommand(ST7735_RAMWR);
+		
+	HAL_GPIO_WritePin(ST7735_DC_PORT, ST7735_DC_PIN, GPIO_PIN_SET);
+		
 	uint32_t size = height * width;
-  for (uint32_t i = 0; i < size; i++)
-  {
-    ST7735_SendByte(colorBytes[0]);
-    ST7735_SendByte(colorBytes[1]);
-  }
-  
-  ST7735_WaitLastData();
-  HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
+	for (uint32_t i = 0; i < size; i++)
+	{
+		ST7735_SendByte(colorBytes[0]);
+		ST7735_SendByte(colorBytes[1]);
+	}
+		
+	ST7735_WaitLastData();
+	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
+	
 }
 //----------------------------------------------------------------------------------------------------------------
 
 
 //plot not fill circle
 //----------------------------------------------------------------------------------------------------------------
-void plot_circle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
+void plot_Circle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
 {
+	if((x0 >= scr1.dsplmt_xend) || (y0 >= scr1.dsplmt_yend))
+		return;
+	
+	if( ( (x0 + r) <= scr1.dsplmt_xstart ) || ( (y0 + r) <= scr1.dsplmt_ystart))
+		return;
+	
+	if(x0 < scr1.dsplmt_xstart)
+		x0 = scr1.dsplmt_xstart + r; 
+	
+	if(y0 < scr1.dsplmt_ystart) 
+		y0 = scr1.dsplmt_ystart + r; 	
+	
+	if((x0 + r - 1) >= scr1.dsplmt_xend)
+		x0 = scr1.dsplmt_xend - r - 1;
+	
+	if((y0 + r - 1) >= scr1.dsplmt_yend)
+		y0 = scr1.dsplmt_xend - r - 1;
+	
 	//starting coordinates
 	int16_t x = 0;
 	int16_t y = r;
@@ -722,8 +894,26 @@ void plot_circle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
 
 //plot fill circle
 //----------------------------------------------------------------------------------------------------------------
-void plot_fillcircle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
+void plot_Fillcircle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
 {
+	if((x0 >= scr1.dsplmt_xend) || (y0 >= scr1.dsplmt_yend))
+		return;
+	
+	if( ( (x0 + r) <= scr1.dsplmt_xstart ) || ( (y0 + r) <= scr1.dsplmt_ystart))
+		return;
+	
+	if(x0 < scr1.dsplmt_xstart)
+		x0 = scr1.dsplmt_xstart + r; 
+	
+	if(y0 < scr1.dsplmt_ystart) 
+		y0 = scr1.dsplmt_ystart + r; 	
+	
+	if((x0 + r - 1) >= scr1.dsplmt_xend)
+		x0 = scr1.dsplmt_xend - r - 1;
+	
+	if((y0 + r - 1) >= scr1.dsplmt_yend)
+		y0 = scr1.dsplmt_xend - r - 1;
+	
 	//starting coordinates
 	int16_t x = 0;
 	int16_t y = r;
@@ -734,10 +924,10 @@ void plot_fillcircle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
 	
 	do
 	{
-		plot_fast_hrznline(x0 - x, y0 + y, 2*x, color);
-		plot_fast_hrznline(x0 - y, y0 + x, 2*y, color);
-		plot_fast_hrznline(x0 - y, y0 - x, 2*y, color);
-		plot_fast_hrznline(x0 - x, y0 - y, 2*x, color);
+		plot_FastHrznLine(x0 - x, y0 + y, 2*x, color);
+		plot_FastHrznLine(x0 - y, y0 + x, 2*y, color);
+		plot_FastHrznLine(x0 - y, y0 - x, 2*y, color);
+		plot_FastHrznLine(x0 - x, y0 - y, 2*x, color);
 		
 		//inside the circle
 		if(p < 0)
@@ -759,11 +949,20 @@ void plot_fillcircle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color)
 
 //plot not filltriangle
 //----------------------------------------------------------------------------------------------------------------
-void plot_triangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color) 
+void plot_Triangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color) 
 {
-  plot_line(x0, y0, x1, y1, color);
-  plot_line(x1, y1, x2, y2, color);
-	plot_line(x2, y2, x0, y0, color);
+	if( (x0 < scr1.dsplmt_xstart) || (x0 >= scr1.dsplmt_xend) || (y0 < scr1.dsplmt_ystart) || (y0 >= scr1.dsplmt_yend) )
+		return;
+	
+	if( (x1 < scr1.dsplmt_xstart) || (x1 >= scr1.dsplmt_xend) || (y1 < scr1.dsplmt_ystart) || (y1 >= scr1.dsplmt_yend) )
+		return;
+	
+	else
+	{
+		plot_Line(x0, y0, x1, y1, color);
+		plot_Line(x1, y1, x2, y2, color);
+		plot_Line(x2, y2, x0, y0, color);
+	}
 }
 //----------------------------------------------------------------------------------------------------------------
 
@@ -778,105 +977,116 @@ void swap(int16_t *a, int16_t *b)
   *b = buf;	
 }
 
-void plot_filltriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) 
+void plot_FillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) 
 {
-
-  int16_t abscissa_x0;
-	int16_t abscissa_x1;
-	int16_t y, saved_y;
-
-  // Sort coordinates p(x0, y0), p(x1, y1), p(x2, y2) 
-	//(y2 >= y1 >= y0)
-  if (y0 > y1) 
-	{
-    swap(&y0, &y1); 
-		swap(&x0, &x1);
-  }
-  if (y1 > y2) 
-	{
-    swap(&y2, &y1); 
-		swap(&x2, &x1);
-  }
-  if (y0 > y1) 
-	{
-    swap(&y0, &y1); 
-		swap(&x0, &x1);
-  }
-
-	//all on same line
-	//****************************************
-  if(y0 == y2 )
-	{
-    abscissa_x0 = abscissa_x1 = x0;
-    if(x1 < abscissa_x0)      
-			abscissa_x0 = x1;
-    else if(x1 > abscissa_x1) 
-			abscissa_x1 = x1;
-    if(x2 < abscissa_x0)      
-			abscissa_x0 = x2;
-    else if(x2 > abscissa_x1) 
-			abscissa_x1 = x2;
-    plot_fast_hrznline(abscissa_x0, y0, abscissa_x1 - abscissa_x0 + 1, color);
-    return;
-  }
-	//****************************************
+	if( (x0 < scr1.dsplmt_xstart) || (x0 >= scr1.dsplmt_xend) || (y0 < scr1.dsplmt_ystart) || (y0 >= scr1.dsplmt_yend) )
+		return;
 	
-	//x-axis increments for three side triangle
-  int32_t dx01 = x1 - x0;
-  int32_t dx02 = x2 - x0;
-	int32_t dx12 = x2 - x1;
+	if( (x1 < scr1.dsplmt_xstart) || (x1 >= scr1.dsplmt_xend) || (y1 < scr1.dsplmt_ystart) || (y1 >= scr1.dsplmt_yend) )
+		return;
 	
-	//y-axis increments for three side triangle
-	int32_t dy01 = y1 - y0;
-  int32_t dy02 = y2 - y0;
-  int32_t dy12 = y2 - y1;
-	
-  int32_t abscissa_trnglx0 = 0;
-  int32_t abscissa_trnglx1 = 0;
+	if( (x2 < scr1.dsplmt_xstart) || (x2 >= scr1.dsplmt_xend) || (y2 < scr1.dsplmt_ystart) || (y2 >= scr1.dsplmt_yend) )
+		return;
 
-  if(y1 == y2) 
-		saved_y = y1;   // Include y1 scanline
-  else         
-		saved_y = y1 - 1; // Skip it
-
-	//up triangle
-  for(y = y0; y <= saved_y; y++) 
+	else
 	{
-		//equation of line 
-    //abscissa_x0 = x0 + (x1 - x0) * (y - y0) / (y1 - y0);
-    //abscissa_x1 = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
-    abscissa_x0 = x0 + abscissa_trnglx0 / dy01;
-    abscissa_x1 = x0 + abscissa_trnglx1 / dy02;
-		
-    abscissa_trnglx0 += dx01;
-    abscissa_trnglx1 += dx02;
-		
-    if(abscissa_x0 > abscissa_x1) 
-			swap(&abscissa_x0, &abscissa_x1);
-		
-    plot_fast_hrznline(abscissa_x0, y, abscissa_x1 - abscissa_x0 + 1, color);
-  }
+		int16_t abscissa_x0;
+		int16_t abscissa_x1;
+		int16_t y, saved_y;
 
-  abscissa_trnglx0 = dx12 * (y - y1);
-  abscissa_trnglx1 = dx02 * (y - y0);
-	
-	//dawn triangle
-  for(; y <= y2; y++) 
-	{
-		//equation of line 
-    //abscissa_x0 = x1 + (x2 - x1) * (y - y1) / (y2 - y1);
-    //abscissa_x1 = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
-    abscissa_x0 = x1 + abscissa_trnglx0 / dy12;
-    abscissa_x1 = x0 + abscissa_trnglx1 / dy02;
+		// Sort coordinates p(x0, y0), p(x1, y1), p(x2, y2) 
+		//(y2 >= y1 >= y0)
+		if (y0 > y1) 
+		{
+			swap(&y0, &y1); 
+			swap(&x0, &x1);
+		}
+		if (y1 > y2) 
+		{
+			swap(&y2, &y1); 
+			swap(&x2, &x1);
+		}
+		if (y0 > y1) 
+		{
+			swap(&y0, &y1); 
+			swap(&x0, &x1);
+		}
+
+		//all on same line
+		//****************************************
+		if(y0 == y2 )
+		{
+			abscissa_x0 = abscissa_x1 = x0;
+			if(x1 < abscissa_x0)      
+				abscissa_x0 = x1;
+			else if(x1 > abscissa_x1) 
+				abscissa_x1 = x1;
+			if(x2 < abscissa_x0)      
+				abscissa_x0 = x2;
+			else if(x2 > abscissa_x1) 
+				abscissa_x1 = x2;
+			plot_FastHrznLine(abscissa_x0, y0, abscissa_x1 - abscissa_x0 + 1, color);
+			return;
+		}
+		//****************************************
 		
-    abscissa_trnglx0 += dx12;
-    abscissa_trnglx1 += dx02;
+		//x-axis increments for three side triangle
+		int32_t dx01 = x1 - x0;
+		int32_t dx02 = x2 - x0;
+		int32_t dx12 = x2 - x1;
 		
-    if(abscissa_x0 > abscissa_x1)
-			swap(&abscissa_x0, &abscissa_x1);
+		//y-axis increments for three side triangle
+		int32_t dy01 = y1 - y0;
+		int32_t dy02 = y2 - y0;
+		int32_t dy12 = y2 - y1;
 		
-    plot_fast_hrznline(abscissa_x0, y, abscissa_x1 - abscissa_x0 + 1, color);
-  }
+		int32_t abscissa_trnglx0 = 0;
+		int32_t abscissa_trnglx1 = 0;
+
+		if(y1 == y2) 
+			saved_y = y1;   // Include y1 scanline
+		else         
+			saved_y = y1 - 1; // Skip it
+
+		//up triangle
+		for(y = y0; y <= saved_y; y++) 
+		{
+			//equation of line 
+			//abscissa_x0 = x0 + (x1 - x0) * (y - y0) / (y1 - y0);
+			//abscissa_x1 = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
+			abscissa_x0 = x0 + abscissa_trnglx0 / dy01;
+			abscissa_x1 = x0 + abscissa_trnglx1 / dy02;
+			
+			abscissa_trnglx0 += dx01;
+			abscissa_trnglx1 += dx02;
+			
+			if(abscissa_x0 > abscissa_x1) 
+				swap(&abscissa_x0, &abscissa_x1);
+			
+			plot_FastHrznLine(abscissa_x0, y, abscissa_x1 - abscissa_x0 + 1, color);
+		}
+
+		abscissa_trnglx0 = dx12 * (y - y1);
+		abscissa_trnglx1 = dx02 * (y - y0);
+		
+		//dawn triangle
+		for(; y <= y2; y++) 
+		{
+			//equation of line 
+			//abscissa_x0 = x1 + (x2 - x1) * (y - y1) / (y2 - y1);
+			//abscissa_x1 = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
+			abscissa_x0 = x1 + abscissa_trnglx0 / dy12;
+			abscissa_x1 = x0 + abscissa_trnglx1 / dy02;
+			
+			abscissa_trnglx0 += dx12;
+			abscissa_trnglx1 += dx02;
+			
+			if(abscissa_x0 > abscissa_x1)
+				swap(&abscissa_x0, &abscissa_x1);
+			
+			plot_FastHrznLine(abscissa_x0, y, abscissa_x1 - abscissa_x0 + 1, color);
+		}
+	}
 }
 //----------------------------------------------------------------------------------------------------------------
 //================================================================================================================================================
@@ -884,6 +1094,7 @@ void plot_filltriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x
 
 //plot text
 //================================================================================================================================================
+/*
 void set_cursor(int16_t x, int16_t y, uint8_t auto_center, uint8_t print_cursor) 
 {
 	if(auto_center == 1)
@@ -894,12 +1105,14 @@ void set_cursor(int16_t x, int16_t y, uint8_t auto_center, uint8_t print_cursor)
 
 	if(x < 0) 
 		x = 0;
+	
 	else if(x >= ST7735_WIDTH) 
 		x = ST7735_WIDTH - 1;
 	crsr1.x_cursor = x;
 	
 	if(y < 0)
 		y = 0;
+	
 	else if(y >= ST7735_HEIGHT) 
 		y = ST7735_HEIGHT - 1;
 	crsr1.y_cursor = y;
@@ -914,7 +1127,7 @@ void set_cursor(int16_t x, int16_t y, uint8_t auto_center, uint8_t print_cursor)
 			return;
 	}
 }
-
+*/
 //================================================================================================================================================
 
 

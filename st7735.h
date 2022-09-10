@@ -3,7 +3,7 @@
 
 //Includes
 //=============================================================================================================================
-#include "stdbool.h"
+//#include "stdbool.h"
 #include "stm32f4xx_hal.h"
 //=============================================================================================================================
 
@@ -96,6 +96,7 @@ typedef struct __cursor_typedef
 	uint16_t y_cursor;
 }cursor_typedef;
 
+
 //variables of text
 typedef struct __text_typedef
 {
@@ -103,6 +104,20 @@ typedef struct __text_typedef
 	uint16_t text_position_x;
 	uint16_t text_position_y;
 }text_typedef;
+
+
+//variables of screen
+typedef struct __screen_typedef
+{
+	//x display limits
+	uint16_t dsplmt_xstart; //display's coordinate of up left corner
+	uint16_t dsplmt_xend; 	//display's coordinate of up right corner
+
+	//y display limits
+	uint16_t dsplmt_ystart; //display's coordinate of down left corner
+	uint16_t dsplmt_yend; 	//display's coordinate of down right corner
+}screen_t;
+
 
 //=============================================================================================================================
 
@@ -119,98 +134,108 @@ void ST7735_Init();
 //Color
 //--------------------------------------------------------------------------------------------------------
 
-//function used to set 16 bits color
-//@param uint16_t red_5 				5 bits are used to set RED,   maximum intensity is 2^5 = 31 
-//@param uint16_t green_6 			6 bits are used to set GREEN, maximum intensity is 2^6 = 61 
-//@param uint16_t blue_5 				5 bits are used to set BLUE,  maximum intensity is 2^5 = 31 
+//@brief							function used to set 16 bits color
+//@param red_5 				5 bits are used to set RED,   maximum intensity is 2^5 = 31 
+//@param green_6 			6 bits are used to set GREEN, maximum intensity is 2^6 = 61 
+//@param blue_5 			5 bits are used to set BLUE,  maximum intensity is 2^5 = 31 
 //@return obtained_color      
-uint16_t setcolor16(uint16_t red_5, uint16_t green_6, uint16_t blue_5);
+uint16_t set_Color16(uint16_t red_5, uint16_t green_6, uint16_t blue_5);
 
 
-//function used to representation color as (255, 255, 255) 
 //INEXACT REPRESENTATION!! THERE ARE INACCURACY!!
-//@param uint16_t red_8 			intensity value of   RED(0..255)   which will be represented as intensity   RED(0..31)
-//@param uint16_t green_8 		intensity value of GREEN(0..255)   which will be represented as intensity GREEN(0..61)	
-//@param uint16_t blue_8			intensity value of  BLUE(0..255)   which will be represented as intensity  BLUE(0..31)
+//@brief						function used to representation color as (255, 255, 255) 
+//@param red_8 			intensity value of   RED(0..255)   which will be represented as intensity   RED(0..31)
+//@param green_8 		intensity value of GREEN(0..255)   which will be represented as intensity GREEN(0..61)	
+//@param blue_8			intensity value of  BLUE(0..255)   which will be represented as intensity  BLUE(0..31)
 //@return obtained_color
-uint16_t convcolor24to16(uint16_t red_8, uint16_t green_8, uint16_t blue_8);
+uint16_t conv_Color24to16(uint16_t red_8, uint16_t green_8, uint16_t blue_8);
 //--------------------------------------------------------------------------------------------------------
 
 
 //Geometric primitives
 //--------------------------------------------------------------------------------------------------------
 
-//@param uint16_t c_pos 					coordinate x0 of pixel
-//@param uint16_t r_pos						coordinate y0 of pixel
-//@param uint16_t color 					the pixel will be (uint16_t color) color
-void ST7735_DrawPixel(uint16_t c_pos, uint16_t r_pos, uint16_t color);
+//@param c_pos 					coordinate x0 of pixel
+//@param r_pos					coordinate y0 of pixel
+//@param color 					the pixel will be (uint16_t color) color
+void ST7735_DrawPixel(uint16_t x, uint16_t y, uint16_t color);
 
 
-//@param uint16_t x0						coordinate x0 of start point
-//@param uint16_t x1						coordinate x1 of finish point
-//@param uint16_t height				height of rectangle		
-//@param uint16_t color					the line will be (uint16_t color) color
-void plot_fast_vrtline(uint16_t x0, uint16_t y0, uint16_t height, uint16_t color);
+//@param x0						coordinate x0 of start point
+//@param x1						coordinate x1 of finish point
+//@param height				height of rectangle		
+//@param color				the line will be (uint16_t color) color
+void plot_FastVrtLine(int16_t x0, int16_t y0, uint16_t height, uint16_t color);
 
 
-//@param uint16_t y0						coordinate y0 of start point
-//@param uint16_t y1						coordinate y1 of finish point
-//@param uint16_t x							width of rectangle
-//@param uint16_t color					the line will be (uint16_t color) color
-void plot_fast_hrznline(uint16_t x0, uint16_t y0, uint16_t width, uint16_t color);
+//@param y0						coordinate y0 of start point
+//@param y1						coordinate y1 of finish point
+//@param x						width of rectangle
+//@param color				the line will be (uint16_t color) color
+void plot_FastHrznLine(int16_t x0, int16_t y0, uint16_t width, uint16_t color);
 
 
-//Line drawing by Bresenham's line algorithm 
-//@param uint16_t x0						coordinate x0 of start point
-//@param uint16_t y0						coordinate y0 of start point
-//@param uint16_t x1						coordinate x1 of finish point
-//@param uint16_t y1						coordinate y1 of finish point
-//@param uint16_t color 				the line will be (uint16_t color) color
-void plot_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
+//@brief							Line drawing by Bresenham's line algorithm 
+//@param x0						coordinate x0 of start point
+//@param y0						coordinate y0 of start point
+//@param x1						coordinate x1 of finish point
+//@param y1						coordinate y1 of finish point
+//@param color 				the line will be (uint16_t color) color
+void plot_Line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
 
 
-//Line drawing by Bresenham's line algorithm 
+//@brief							Line drawing by Bresenham's line algorithm 
+//@param x0						coordinate x0 of start point
+//@param y0						coordinate y0 of start point
+//@param x1						coordinate x1 of finish point
+//@param y1						coordinate y1 of finish point
 //the line will be with smooth transition from color_x0y0 to color_x1y1. For the gradien is used linear interpolation
-//@param uint16_t x0						coordinate x0 of start point
-//@param uint16_t y0						coordinate y0 of start point
-//@param uint16_t x1						coordinate x1 of finish point
-//@param uint16_t y1						coordinate y1 of finish point
-//@param uint16_t color_x0y0 		color of start point
-//@param uint16_t color_x1y1		color of finish point
-void plot_line_2color(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color_x0y0, uint16_t color_x1y1);
+//@param color_x0y0 	color of start point
+//@param color_x1y1		color of finish point
+void plot_Line2Color(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color_x0y0, uint16_t color_x1y1);
 
 
-//@param uint16_t c_start				coordinate x0 of start point
-//@param uint16_t r_start				coordinate y0 of start point
-//@param uint16_t width					width of rectangle
-//@param uint16_t height				height of rectangle
-//@param uint16_t color					the rectangle will be (uint16_t color) color
-void plot_rectangle(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t color);
-
-void plot_fillrectangle(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, uint16_t color);
-
-
-//Circle drawing by midpoint circle drawing algorithm
-//@param uint16_t x0						coordinate x0 of circle center
-//@param uint16_t y0						coordinate y0 of circle center
-//@param uint16_t r							radius of the circle
-//@param uint16_t color					color of the circle
-void plot_circle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
-
-void plot_fillcircle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
+//@param c_start			coordinate x0 of start point
+//@param r_start			coordinate y0 of start point
+//@param width				width of rectangle
+//@param height				height of rectangle
+//@param color				the rectangle will be (uint16_t color) color
+void plot_Rectangle(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t color);
+void plot_FillRectangle(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, uint16_t color);
 
 
-//@param uint16_t x0						coordinate x0 of first point
-//@param uint16_t y0						coordinate y0 of first point
-//@param uint16_t x1						coordinate x1 of second point
-//@param uint16_t y1						coordinate y1 of second point
-//@param uint16_t x2						coordinate x0 of third point
-//@param uint16_t y2						coordinate y0 of third point
-void plot_triangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
+//@brief 							Circle drawing by midpoint circle drawing algorithm
+//@param x0						coordinate x0 of circle center
+//@param y0						coordinate y0 of circle center
+//@param r						radius of the circle
+//@param color				color of the circle
+void plot_Circle(uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
+void plot_FillCircle( uint16_t x0, uint16_t y0, int16_t r, uint16_t color);
 
-void plot_filltriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color);
+
+//@param x0						coordinate x0 of first point
+//@param y0						coordinate y0 of first point
+//@param x1						coordinate x1 of second point
+//@param y1						coordinate y1 of second point
+//@param x2						coordinate x0 of third point
+//@param y2						coordinate y0 of third point
+void plot_Triangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
+void plot_FillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color);
 //--------------------------------------------------------------------------------------------------------
 
+
 void set_cursor(int16_t x, int16_t y, uint8_t auto_center, uint8_t print_cursor);
+
+
+//@brief 							Set screen rotate. Default init is 0 (screen's loop up).
+//										AlWAYS X-Y address(0,0) locate in up left corner of screen.
+//@param angle				set 0   -> portrait
+//										set 90  -> right turn
+//										set 180 -> upside down
+//										set 270 -> left turn
+void set_ScreenRotate(uint16_t angle);
+
+
+void fillScreen(uint16_t color);
 //=============================================================================================================================
 #endif // #ifndef ST7735_H_
