@@ -1,6 +1,7 @@
 // Includes
 //=============================================================================================================================
 #include "st7735.h"
+#include "font5x7.h"
 #include "math.h"
 //=============================================================================================================================
 
@@ -9,8 +10,7 @@
 //=============================================================================================================================
 extern SPI_HandleTypeDef hspi1;
 
-cursor_typedef crsr1;
-text_typedef txt1;
+cursor_t crsr1;
 
 screen_t scr1 = {0, ST7735_WIDTH, 0, ST7735_HEIGHT};
 //=============================================================================================================================
@@ -239,6 +239,7 @@ void set_ScreenRotate(uint16_t angle)
 void fillScreen(uint16_t color)
 {
 	plot_FillRectangle(0, 0, scr1.dsplmt_xend, scr1.dsplmt_yend, color);
+	scr1.color_bckgrnd = color;
 }
 
 
@@ -1094,40 +1095,245 @@ void plot_FillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x
 
 //plot text
 //================================================================================================================================================
-/*
-void set_cursor(int16_t x, int16_t y, uint8_t auto_center, uint8_t print_cursor) 
+
+//----------------------------------------------------------------------------------------------------------------
+void set_cursor(int16_t x, int16_t y, _Bool auto_center) 
 {
-	if(auto_center == 1)
+	if(auto_center == true)
 	{		
-		x = ST7735_WIDTH / 2;
-		y = ST7735_HEIGHT / 2;
+		crsr1.x = scr1.dsplmt_xend / 2;
+		crsr1.y = scr1.dsplmt_yend / 2;
+		return;
 	}
 
 	if(x < 0) 
 		x = 0;
 	
-	else if(x >= ST7735_WIDTH) 
-		x = ST7735_WIDTH - 1;
-	crsr1.x_cursor = x;
+	else if(x >= scr1.dsplmt_xend) 
+		x = scr1.dsplmt_xend - 1;
+	crsr1.x = x;
 	
 	if(y < 0)
 		y = 0;
 	
-	else if(y >= ST7735_HEIGHT) 
-		y = ST7735_HEIGHT - 1;
-	crsr1.y_cursor = y;
+	else if(y >= scr1.dsplmt_yend) 
+		y = scr1.dsplmt_yend - 1;
+	crsr1.y = y;
+}
+//----------------------------------------------------------------------------------------------------------------
+
+
+//print ASII symbol
+//----------------------------------------------------------------------------------------------------------------
+void print_Char(unsigned char c, uint16_t color, uint8_t size_x, uint8_t size_y)
+{
+	if( (crsr1.x >= scr1.dsplmt_xend) || (crsr1.y >= scr1.dsplmt_yend) || ( (crsr1.x + 6 - 1) < 0) || ((crsr1.y + 8 - 1) < 0) )
+		return;
 	
-	txt1.text_size = 5;
+	if( color == scr1.color_bckgrnd)
+		return;
 	
-	if(print_cursor == 1)
+	if( (size_x == 1) || (size_y == 1) )
 	{
-		if(txt1.text_size != NULL)
-			plot_fast_vrtline(crsr1.x_cursor, crsr1.y_cursor, txt1.text_size, ST7735_COLOR_WHITE);
-		else
-			return;
+		uint8_t mask = 0x01;
+		int16_t xoff, yoff;
+				
+		for (yoff = 0; yoff < 8; yoff++) 
+		{
+			uint8_t line = 0;
+			
+			for (xoff = 0; xoff < 5; xoff++) 
+			{
+				if(font5x7[c * 5 + xoff] & mask) 
+					line |= 1;
+				line <<= 1;
+			}
+			line >>= 1;
+			
+			xoff = 0;
+			
+			while(line) 
+			{
+				if (line == 0x1F) 
+				{
+					plot_FastHrznLine(crsr1.x + xoff, crsr1.y + yoff, 5, color);
+					break;
+				}
+							
+				else if(line == 0x1E) 
+				{
+					plot_FastHrznLine(crsr1.x + xoff, crsr1.y + yoff, 4, color);
+					break;
+				}
+							
+				else if((line & 0x1C) == 0x1C) 
+				{
+					plot_FastHrznLine(crsr1.x + xoff, crsr1.y + yoff, 3, color);
+					line <<= 4;
+					xoff += 4;
+				} 
+							
+				else if((line & 0x18) == 0x18) 
+				{
+					plot_FastHrznLine(crsr1.x + xoff, crsr1.y + yoff, 2, color);
+					line <<= 3;
+					xoff += 3;
+				}
+							
+				else if((line & 0x10) == 0x10) 
+				{
+					ST7735_DrawPixel(crsr1.x + xoff, crsr1.y + yoff, color);
+					line <<= 2;
+					xoff += 2;
+				} 
+							
+				else 
+				{
+					line <<= 1;
+					xoff += 1;
+				}
+			}
+			mask = mask << 1;
+		}
+	}
+	
+	else
+	{
+		uint8_t mask = 0x01;
+		int16_t xoff, yoff;
+		
+		for(yoff=0; yoff < 8; yoff++) 
+		{
+			uint8_t line = 0;
+			for(xoff=0; xoff < 5; xoff++) 
+			{
+				if (font5x7[c * 5 + xoff] & mask) 
+					line |= 1;
+				line <<= 1;
+			}
+			
+			line >>= 1;
+			xoff = 0;
+			while(line) 
+			{
+				if(line == 0x1F)
+				{
+					plot_FillRectangle(crsr1.x  + xoff * size_x, crsr1.y + yoff * size_y, 5 * size_x, size_y, color);
+					break;
+				} 
+				else if(line == 0x1E)
+				{
+					plot_FillRectangle(crsr1.x  + xoff * size_x, crsr1.y + yoff * size_y, 4 * size_x, size_y, color);
+					break;
+				}
+				else if((line & 0x1C) == 0x1C)
+				{
+					plot_FillRectangle(crsr1.x  + xoff * size_x, crsr1.y + yoff * size_y, 3 * size_x, size_y, color);
+					line <<= 4;
+					xoff += 4;
+				}
+				else if((line & 0x18) == 0x18)
+				{
+					plot_FillRectangle(crsr1.x  + xoff * size_x, crsr1.y + yoff * size_y, 2 * size_x, size_y, color);
+					line <<= 3;
+					xoff += 3;
+				} 
+				else if((line & 0x10) == 0x10)
+				{
+					plot_FillRectangle(crsr1.x  + xoff * size_x, crsr1.y + yoff * size_y, size_x, size_y, color);
+					line <<= 2;
+					xoff += 2;
+				} 
+				else 
+				{
+					line <<= 1;
+					xoff += 1;
+				}
+			}
+			mask = mask << 1;
+		}
 	}
 }
-*/
+//----------------------------------------------------------------------------------------------------------------
+
+
+//print ASII string
+//----------------------------------------------------------------------------------------------------------------
+
+//String size in char
+uint16_t strLenChar(const char *ptrStr)
+{
+	uint16_t size = 0;
+    
+   while(*ptrStr)
+   {
+		 size++;
+     ptrStr++;    
+	 }
+    return size;
+}
+
+void print_CharString(const char message[], uint16_t color, uint8_t size_x, uint8_t size_y)
+{
+	if( (crsr1.x >= scr1.dsplmt_xend) || (crsr1.y >= scr1.dsplmt_yend) )
+		return;
+	
+	uint16_t len = strLenChar(message);
+	
+	if( ((crsr1.x + 6 * size_x * len - 1) > scr1.dsplmt_xend) )
+		return;
+	
+	for(uint16_t i = 0; i <= len; i++)
+	{
+		set_cursor(crsr1.x, crsr1.y, false);
+		print_Char(message[i], color, size_x, size_y);
+		crsr1.x += size_x * 6;
+	}
+}
+//----------------------------------------------------------------------------------------------------------------
+
+
+//print int number
+//----------------------------------------------------------------------------------------------------------------
+void itoa(int n, char s[])
+ {
+	 uint32_t i; 
+	 int32_t sign;
+
+   if((sign = n) < 0) 
+		 n = -n; 
+	 
+	 i = 0;
+   do
+	 {
+		 s[i++] = n % 10 + '0';  
+   }
+	 while((n /= 10) > 0);   
+     
+	 if(sign < 0)
+		 s[i++] = '-';
+	 
+	 s[i] = '\0';
+
+	 //reverse string
+	 uint8_t istr, jstr;
+   char c;
+
+   for(istr = 0, jstr = strLenChar(s)-1; istr<jstr; istr++, jstr--) 
+	 {
+		 c = s[istr];
+     s[istr] = s[jstr];
+     s[jstr] = c;
+   }
+ }
+
+void print_IntNum(int32_t num, uint16_t color, uint8_t size_x, uint8_t size_y)
+{
+	char str[32];
+	itoa(num, str);
+	print_CharString(str, color, size_x, size_y);
+}
+//----------------------------------------------------------------------------------------------------------------
 //================================================================================================================================================
 
 

@@ -3,7 +3,7 @@
 
 //Includes
 //=============================================================================================================================
-//#include "stdbool.h"
+#include "stdbool.h"
 #include "stm32f4xx_hal.h"
 //=============================================================================================================================
 
@@ -92,18 +92,9 @@
 //variables of cursor
 typedef struct __cursor_typedef
 {
-	uint16_t x_cursor;
-	uint16_t y_cursor;
-}cursor_typedef;
-
-
-//variables of text
-typedef struct __text_typedef
-{
-	uint16_t text_size;
-	uint16_t text_position_x;
-	uint16_t text_position_y;
-}text_typedef;
+	uint16_t x;
+	uint16_t y;
+}cursor_t;
 
 
 //variables of screen
@@ -116,6 +107,8 @@ typedef struct __screen_typedef
 	//y display limits
 	uint16_t dsplmt_ystart; //display's coordinate of down left corner
 	uint16_t dsplmt_yend; 	//display's coordinate of down right corner
+	
+	uint16_t color_bckgrnd; //color background screen
 }screen_t;
 
 
@@ -127,7 +120,23 @@ typedef struct __screen_typedef
 
 //initialization
 //--------------------------------------------------------------------------------------------------------
+
+//@brief 							screen's initialization
 void ST7735_Init();
+
+
+//@brief 							Set screen rotate. Default init is 0 (screen's loop up).
+//										AlWAYS X-Y address(0,0) locate in up left corner of screen.
+//@param angle				set 0   -> portrait
+//										set 90  -> right turn
+//										set 180 -> upside down
+//										set 270 -> left turn
+void set_ScreenRotate(uint16_t angle);
+
+
+//@brief 							fill thr screen
+//@param color				color of screen
+void fillScreen(uint16_t color);
 //--------------------------------------------------------------------------------------------------------
 
 
@@ -224,18 +233,42 @@ void plot_FillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x
 //--------------------------------------------------------------------------------------------------------
 
 
-void set_cursor(int16_t x, int16_t y, uint8_t auto_center, uint8_t print_cursor);
+//Write text
+//--------------------------------------------------------------------------------------------------------
+
+//@brief 							Sets the position from which the char/text will be printed. 
+//										The start of the char is the up left corner.
+//@param x						coordinate x 
+//@param y						coordinate y
+//@param auto_center	coordinate x and y has position middle of the screen
+void set_cursor(int16_t x, int16_t y, _Bool auto_center);
 
 
-//@brief 							Set screen rotate. Default init is 0 (screen's loop up).
-//										AlWAYS X-Y address(0,0) locate in up left corner of screen.
-//@param angle				set 0   -> portrait
-//										set 90  -> right turn
-//										set 180 -> upside down
-//										set 270 -> left turn
-void set_ScreenRotate(uint16_t angle);
+//@brief 							Print ONLY the standard ASCII symbol.(Before use check if font5x7.h is included!) 
+//@param c						ASCII symbol 
+//@param color				Ñolor of the symbol
+//										For standard size of ASCII symbol(5x7 pixel) -> size_x = 1, size_y = 1
+//@param size_x				The width size of the "pixel" from which the symbol is built 
+//@param size_y				The height size of the "pixel" from which the symbol is built
+void print_Char(unsigned char c, uint16_t color, uint8_t size_x, uint8_t size_y);
 
 
-void fillScreen(uint16_t color);
+//@brief 							Print the standard ASCII string.(Before use check if font5x7.h is included!) 
+//@param message[]		char string
+//@param color				Ñolor of the symbol
+//										For standard size of ASCII symbol(5x7 pixel) -> size_x = 1, size_y = 1
+//@param size_x				The width size of the "pixel" from which the symbol is built 
+//@param size_y				The height size of the "pixel" from which the symbol is built
+void print_CharString(const char message[], uint16_t color, uint8_t size_x, uint8_t size_y);
+
+
+//@brief 							Print an integer converted to a string 
+//@param num					an integer 
+//@param color				Ñolor of the symbol
+//										For standard size of ASCII symbol(5x7 pixel) -> size_x = 1, size_y = 1
+//@param size_x				The width size of the "pixel" from which the symbol is built 
+//@param size_y				The height size of the "pixel" from which the symbol is built
+void print_IntNum(int32_t num, uint16_t color, uint8_t size_x, uint8_t size_y);
+//--------------------------------------------------------------------------------------------------------
 //=============================================================================================================================
 #endif // #ifndef ST7735_H_
