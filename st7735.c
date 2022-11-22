@@ -179,6 +179,8 @@ void ST7735_Init()
   ST7735_SendData(0x00);
   ST7735_SendData(0x02);
   ST7735_SendData(0x10);
+	
+	ST7735_SendCommand(ST7735_TEON);
 
   ST7735_SendCommand(ST7735_NORON);
   HAL_Delay(10);
@@ -189,6 +191,28 @@ void ST7735_Init()
   HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
 }
 //----------------------------------------------------------------------------
+
+
+/*
+//----------------------------------------------------------------------------
+void set_partialArea(uint16_t l_start, uint16_t l_finish)
+{
+	uint8_t parametr[4];
+  
+  parametr[0] = (l_start & 0xFF00) >> 8;
+	parametr[1] = l_start & 0x00FF;
+  parametr[2] = (l_finish & 0xFF00) >> 8;
+  parametr[3] = l_finish & 0x00FF;
+  
+	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_RESET);
+	
+  ST7735_SendCommand(ST7735_PTLAR);
+  ST7735_SendDataMultiple(parametr, 4);
+	
+	HAL_GPIO_WritePin(ST7735_CS_PORT, ST7735_CS_PIN, GPIO_PIN_SET);
+}
+//----------------------------------------------------------------------------
+*/
 
 
 //----------------------------------------------------------------------------
@@ -1338,4 +1362,63 @@ void print_IntNum(int32_t num, uint16_t color, uint8_t size_x, uint8_t size_y)
 
 
 
+//print float number
+//----------------------------------------------------------------------------------------------------------------
+void print_FloatNum(float floatNumber, uint16_t color, uint8_t size_x, uint8_t size_y)
+{
+  char str[32];               // Array to contain decimal string
+  uint8_t ptr = 0;            // Initialise pointer for array
+  int8_t  digits = 1;         // Count the digits to avoid array overflow
+  float rounding = 0.5;       // Round up down delta
 
+	uint8_t dp = 7;						  //Decimal portion
+  
+  // Adjust the rounding value
+  for (uint8_t i = 0; i < dp; ++i) 
+		rounding /= 10.0f;
+
+  if (floatNumber < -rounding)
+  {
+    str[ptr++] = '-'; 						// Negative number
+    str[ptr] = 0; 								// Put a null in the array as a precaution
+    digits = 0;   								// Set digits to 0 to compensate so pointer value can be used later
+    floatNumber = -floatNumber; 	// Make positive
+  }
+
+  floatNumber += rounding; 				// Round up or down
+
+  
+  uint32_t temp = floatNumber;
+
+  // Put integer part into array
+  itoa(temp, str + ptr);
+
+  // Find out where the null is to get the digit count loaded
+  while ((uint8_t)str[ptr] != 0) 
+		ptr++; 	// Move the pointer along
+  
+	digits += ptr;         // Count the digits
+
+  str[ptr++] = '.'; 		// Add decimal point
+  str[ptr] = '0';   		// Add a dummy zero
+  str[ptr + 1] = 0; 		// Add a null but don't increment pointer so it can be overwritten
+
+  // Get the decimal portion
+  floatNumber = floatNumber - temp;
+
+  // Get decimal digits one by one and put in array
+  // Limit digit count so we don't get a false sense of resolution
+  uint8_t i = 0;
+  while ((i < dp) && (digits < 9)) // while (i < dp) for no limit but array size must be increased
+  {
+    i++;
+    floatNumber *= 10;       // for the next decimal
+    temp = floatNumber;      // get the decimal
+    itoa(temp, str + ptr);
+    ptr++; digits++;         // Increment pointer and digits count
+    floatNumber -= temp;     // Remove that digit
+  }
+
+  print_CharString(str, color, size_x, size_y);
+}
+//================================================================================================================================================

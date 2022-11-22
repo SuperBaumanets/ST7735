@@ -83,6 +83,12 @@
 #define ST7735_GMCTRP1                                                  0xE0
 #define ST7735_GMCTRN1                                                  0xE1
 
+#define ST7735_PTLAR																										0x30
+#define ST7735_SCRLAR																										0x33
+
+#define ST7735_TEOFF																										0x34
+#define ST7735_TEON																											0x35
+
 #define ST7735_SPI_TIMEOUT                                              100
 //=============================================================================================================================
 
@@ -137,6 +143,9 @@ void set_ScreenRotate(uint16_t angle);
 //@brief 							fill thr screen
 //@param color				color of screen
 void fillScreen(uint16_t color);
+
+
+void set_partialArea(uint16_t l_start, uint16_t l_finish);
 //--------------------------------------------------------------------------------------------------------
 
 
@@ -269,6 +278,15 @@ void print_CharString(const char message[], uint16_t color, uint8_t size_x, uint
 //@param size_x				The width size of the "pixel" from which the symbol is built 
 //@param size_y				The height size of the "pixel" from which the symbol is built
 void print_IntNum(int32_t num, uint16_t color, uint8_t size_x, uint8_t size_y);
+
+
+//@brief 							Print an float converted to a string 
+//@param num					an integer 
+//@param color				Ñolor of the symbol
+//										For standard size of ASCII symbol(5x7 pixel) -> size_x = 1, size_y = 1
+//@param size_x				The width size of the "pixel" from which the symbol is built 
+//@param size_y				The height size of the "pixel" from which the symbol is built
+void print_FloatNum(float floatNumber, uint16_t color, uint8_t size_x, uint8_t size_y);
 //--------------------------------------------------------------------------------------------------------
 //=============================================================================================================================
 #endif // #ifndef ST7735_H_
